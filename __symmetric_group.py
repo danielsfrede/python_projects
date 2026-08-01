@@ -1,0 +1,128 @@
+"""
+symmetric_group.py
+
+Models the symmetric group S_n: generates all permutations of
+{0, 1, ..., n-1} and defines composition as the group operation.
+
+A permutation sigma is represented as a list p such that
+sigma(i) = p[i]  (one-line notation).
+
+Composition convention (the standard one in group theory):
+    (sigma o tau)(i) = sigma(tau(i))
+i.e. tau is applied first, then sigma. With this convention, the set
+of n! permutations under composition forms the group S_n: the
+operation is associative, there is an identity element, and every
+element has an inverse.
+"""
+
+from math import gcd
+from itertools import permutations
+from typing import List
+
+
+# ---------------------------------------------------------------------
+# Generation of elements of S_n
+# ---------------------------------------------------------------------
+
+def generate_permutations(n: int) -> List[List[int]]:
+    """
+    Returns the list of all n! permutations of {0, ..., n-1}.
+    Uses itertools.permutations (equivalent in result to a Heap-style
+    algorithm, but more idiomatic in Python).
+    """
+    return [list(p) for p in permutations(range(n))]
+
+
+# ---------------------------------------------------------------------
+# Group operation: composition
+# ---------------------------------------------------------------------
+
+def compose(sigma: List[int], tau: List[int]) -> List[int]:
+    """
+    Computes sigma o tau, defined by (sigma o tau)(i) = sigma(tau(i)).
+    """
+    if len(sigma) != len(tau):
+        raise ValueError("Permutations must act on the same n")
+    return [sigma[tau[i]] for i in range(len(sigma))]
+
+
+def identity(n: int) -> List[int]:
+    """Returns the identity permutation of S_n."""
+    return list(range(n))
+
+
+def inverse(sigma: List[int]) -> List[int]:
+    """
+    Computes the inverse permutation: sigma^{-1}(sigma(i)) = i.
+    """
+    inv = [0] * len(sigma)
+    for i, v in enumerate(sigma):
+        inv[v] = i
+    return inv
+
+
+def is_identity(sigma: List[int]) -> bool:
+    return all(sigma[i] == i for i in range(len(sigma)))
+
+
+# ---------------------------------------------------------------------
+# Cycle structure
+# ---------------------------------------------------------------------
+
+def cycle_decomposition(sigma: List[int], exclude_fixed_points: bool = True):
+    """
+    Decomposes sigma into disjoint cycles. Returns a list of lists of
+    indices (internally 0-indexed).
+    """
+    n = len(sigma)
+    visited = [False] * n
+    cycles = []
+    for start in range(n):
+        if visited[start]:
+            continue
+        cycle = []
+        current = start
+        while not visited[current]:
+            visited[current] = True
+            cycle.append(current)
+            current = sigma[current]
+        if not (exclude_fixed_points and len(cycle) == 1):
+            cycles.append(cycle)
+    return cycles
+
+
+def cycle_notation(sigma: List[int]) -> str:
+    """Represents sigma in standard cycle notation, 1-indexed."""
+    cycles = cycle_decomposition(sigma, exclude_fixed_points=True)
+    if not cycles:
+        return "id"
+    parts = []
+    for c in cycles:
+        parts.append("(" + " ".join(str(i + 1) for i in c) + ")")
+    return "".join(parts)
+
+
+def one_line_notation(sigma: List[int]) -> str:
+    return "(" + " ".join(str(x + 1) for x in sigma) + ")"
+
+
+def order(sigma: List[int]) -> int:
+    """Order of the permutation: lcm of its cycle lengths."""
+    cycles = cycle_decomposition(sigma, exclude_fixed_points=True)
+    result = 1
+    for c in cycles:
+        result = result * len(c) // gcd(result, len(c))
+    return result
+
+
+def sign(sigma: List[int]) -> int:
+    """
+    Sign of the permutation: +1 if even, -1 if odd.
+    Product of (-1)^(cycle_length - 1) over all cycles.
+    """
+    cycles = cycle_decomposition(sigma, exclude_fixed_points=True)
+    s = 1
+    for c in cycles:
+        if (len(c) - 1) % 2 != 0:
+            s = -s
+    return s
