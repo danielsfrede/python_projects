@@ -1,4 +1,5 @@
 # python_projects
+Most of this code had been generated with AI. Handle with care.
 
 
 ### Symmetric Group Explorer
