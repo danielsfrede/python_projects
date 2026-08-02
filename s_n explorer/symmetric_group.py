@@ -513,3 +513,124 @@ def print_all_subgroups(elements: List[List[int]], group_label: str = "G") -> No
         print(f"  Subgroup {idx}: order {len(h)}{trivial_note} -- {tag}")
         print(f"    Elements: {{ {members} }}")
         print()
+
+
+# ---------------------------------------------------------------------
+# Quotient groups G/H (only defined when H is normal in G)
+# ---------------------------------------------------------------------
+
+def left_cosets(subgroup: List[List[int]], elements: List[List[int]]):
+    """
+    Computes the left cosets gH of `subgroup` in the group `elements`.
+    Returns a list of cosets, each a sorted list of permutations
+    (tuples internally, converted back to lists). Every element of
+    `elements` appears in exactly one coset.
+    """
+    subgroup_set = [tuple(h) for h in subgroup]
+    remaining = set(tuple(g) for g in elements)
+    cosets = []
+
+    while remaining:
+        g = next(iter(remaining))
+        coset = sorted(tuple(compose(list(g), list(h))) for h in subgroup_set)
+        cosets.append(coset)
+        remaining -= set(coset)
+
+    cosets.sort(key=lambda c: c[0])
+    return [[list(t) for t in c] for c in cosets]
+
+
+def quotient_group(subgroup: List[List[int]], elements: List[List[int]]):
+    """
+    Builds the quotient group G/H, where G = `elements` and
+    H = `subgroup`. Requires H to be normal in G (raises ValueError
+    otherwise, since G/H is only a group when H is normal).
+
+    Returns a dict with:
+        'cosets'      : list of cosets, each a list of permutations
+                        (the elements of the quotient group)
+        'order'       : |G/H| = |G| / |H|
+        'table'       : Cayley table of G/H, as indices into 'cosets'
+        'identity_idx': index of the coset that is the identity (H itself)
+    Coset multiplication is well-defined by (gH)(g'H) = (gg')H,
+    using any representative from each coset.
+    """
+    if not is_normal_subgroup(subgroup, elements):
+        raise ValueError(
+            "The quotient G/H is only a group when H is a normal subgroup; "
+            "this subgroup is not normal in the given group."
+        )
+
+    cosets = left_cosets(subgroup, elements)
+    m = len(cosets)
+
+    # map each element to the index of the coset containing it
+    coset_of = {}
+    for idx, coset in enumerate(cosets):
+        for g in coset:
+            coset_of[tuple(g)] = idx
+
+    table = [[0] * m for _ in range(m)]
+    for i in range(m):
+        rep_i = cosets[i][0]
+        for j in range(m):
+            rep_j = cosets[j][0]
+            product = compose(rep_i, rep_j)
+            table[i][j] = coset_of[tuple(product)]
+
+    subgroup_set = set(tuple(h) for h in subgroup)
+    identity_idx = next(idx for idx, c in enumerate(cosets) if set(tuple(g) for g in c) == subgroup_set)
+
+    return {
+        "cosets": cosets,
+        "order": m,
+        "table": table,
+        "identity_idx": identity_idx,
+    }
+
+
+def quotient_element_order(table: List[List[int]], identity_idx: int, elem_idx: int) -> int:
+    """Order of an element within an abstract group given by its Cayley table."""
+    current = elem_idx
+    k = 1
+    while current != identity_idx:
+        current = table[current][elem_idx]
+        k += 1
+        if k > len(table) + 1:
+            raise RuntimeError("Element order computation did not terminate; malformed table.")
+    return k
+
+
+def print_quotient_group(subgroup: List[List[int]], elements: List[List[int]],
+                          group_label: str = "G", subgroup_label: str = "H") -> None:
+    """
+    Prints the quotient group G/H: its cosets, order, Cayley table,
+    and the order of each element within the quotient. Raises
+    ValueError (propagated from quotient_group) if H is not normal.
+    """
+    q = quotient_group(subgroup, elements)
+    cosets, m, table, id_idx = q["cosets"], q["order"], q["table"], q["identity_idx"]
+
+    print(f"Quotient group {group_label}/{subgroup_label}")
+    print(f"|{group_label}| = {len(elements)}, |{subgroup_label}| = {len(subgroup)}, "
+          f"|{group_label}/{subgroup_label}| = {m}\n")
+
+    print("Cosets (elements of the quotient group):")
+    for i, c in enumerate(cosets):
+        members = ", ".join(cycle_notation(g) for g in c)
+        tag = " <- identity (this coset is H itself)" if i == id_idx else ""
+        print(f"  Coset {i + 1}: {{ {members} }}{tag}")
+
+    print(f"\nCayley table of {group_label}/{subgroup_label} (entries = coset index):")
+    width = len(str(m)) + 1
+    header = " " * (width + 1) + " ".join(f"{j + 1:>{width}}" for j in range(m))
+    print(header)
+    print(" " * (width + 1) + "-" * (len(header) - (width + 1)))
+    for i in range(m):
+        row = " ".join(f"{table[i][j] + 1:>{width}}" for j in range(m))
+        print(f"{i + 1:>{width}} |{row}")
+
+    print("\nElement orders within the quotient group:")
+    for i in range(m):
+        ord_i = quotient_element_order(table, id_idx, i)
+        print(f"  Coset {i + 1}: order {ord_i}")

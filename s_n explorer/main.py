@@ -26,6 +26,9 @@ from symmetric_group import (
     print_dihedral_group,
     print_dihedral_drawing,
     print_all_subgroups,
+    all_subgroups,
+    is_normal_subgroup,
+    print_quotient_group,
 )
 
 
@@ -87,7 +90,8 @@ def main():
         print("  6) Print Cayley table (all compositions)")
         print("  7) Construct dihedral group D_m (rotations and reflections)")
         print("  8) List all subgroups and identify normal ones")
-        print("  9) Exit")
+        print("  9) Compute a quotient group G/H")
+        print("  10) Exit")
         choice = input("Choose an option: ").strip()
 
         if choice == "1":
@@ -167,6 +171,27 @@ def main():
             print_all_subgroups(elements, group_label=f"S_{n}")
 
         elif choice == "9":
+            print()
+            if len(elements) > 24:
+                confirm = input(
+                    f"S_{n} has {len(elements)} elements. Finding subgroups can be "
+                    f"slow for large groups. Continue? (y/n): "
+                ).strip().lower()
+                if confirm != "y":
+                    continue
+            subgroups = all_subgroups(elements)
+            normal_subs = [h for h in subgroups if is_normal_subgroup(h, elements)]
+            if not normal_subs:
+                print("No normal subgroups found (only trivial cases are expected here).")
+                continue
+            print("Normal subgroups available for the quotient:")
+            for i, h in enumerate(normal_subs):
+                print(f"  {i + 1}) order {len(h)}")
+            idx = read_index(f"Choose H (1..{len(normal_subs)}): ", len(normal_subs))
+            print()
+            print_quotient_group(normal_subs[idx - 1], elements, group_label=f"S_{n}", subgroup_label="H")
+
+        elif choice == "10":
             running = False
 
         else:
