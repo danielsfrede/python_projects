@@ -19,9 +19,13 @@ from symmetric_group import (
     one_line_notation,
     order,
     sign,
+    order_and_sign,
     list_elements_with_inverses,
     list_self_inverse_elements,
     print_cayley_table,
+    print_dihedral_group,
+    print_dihedral_drawing,
+    print_all_subgroups,
 )
 
 
@@ -81,7 +85,9 @@ def main():
         print("  4) List all elements with their inverses")
         print("  5) List elements that are their own inverse")
         print("  6) Print Cayley table (all compositions)")
-        print("  7) Exit")
+        print("  7) Construct dihedral group D_m (rotations and reflections)")
+        print("  8) List all subgroups and identify normal ones")
+        print("  9) Exit")
         choice = input("Choose an option: ").strip()
 
         if choice == "1":
@@ -103,8 +109,9 @@ def main():
             print()
             print(f"Permutation     : {one_line_notation(p)}")
             print(f"Cycle notation  : {cycle_notation(p)}")
-            print(f"Order           : {order(p)}")
-            print(f"Sign (parity)   : {'+1 (even)' if sign(p) == 1 else '-1 (odd)'}")
+            p_order, p_sign = order_and_sign(p)
+            print(f"Order           : {p_order}")
+            print(f"Sign (parity)   : {'+1 (even)' if p_sign == 1 else '-1 (odd)'}")
             inv = inverse(p)
             print(f"Inverse         : {one_line_notation(inv)} = {cycle_notation(inv)}")
             print(f"Is identity?    : {is_identity(p)}")
@@ -133,6 +140,33 @@ def main():
             print_cayley_table(elements)
 
         elif choice == "7":
+            print()
+            m_entry = input("Enter m for the dihedral group D_m (m >= 3, regular m-gon): ").strip()
+            try:
+                m = int(m_entry)
+                if m < 3:
+                    print("m must be at least 3.")
+                    continue
+            except ValueError:
+                print("Please enter a valid integer.")
+                continue
+            print()
+            print_dihedral_group(m)
+            print()
+            print_dihedral_drawing(m)
+
+        elif choice == "8":
+            print()
+            if len(elements) > 24:
+                confirm = input(
+                    f"S_{n} has {len(elements)} elements. Finding all subgroups can be "
+                    f"slow for large groups. Continue? (y/n): "
+                ).strip().lower()
+                if confirm != "y":
+                    continue
+            print_all_subgroups(elements, group_label=f"S_{n}")
+
+        elif choice == "9":
             running = False
 
         else:
